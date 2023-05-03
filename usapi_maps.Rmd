@@ -11,6 +11,7 @@ library(tidyverse)
 library(urbnmapr)
 library(here)
 library(plotly)
+library(mapview)
 
 
 ```
@@ -50,7 +51,7 @@ spatial_data <- left_join(get_urbn_map(map = "territories_states", sf = TRUE),
 
 ```{r}
 
-ggplot() +
+plot <- ggplot() +
   geom_sf(spatial_data,
           mapping = aes(fill = ratio),
           color = "#ffffff", size = 0.25) +
@@ -64,7 +65,14 @@ ggplot() +
         axis.ticks = element_blank(),
         axis.text.x = element_blank(),
         axis.text.y = element_blank()) 
+
+plot
    
+```
+
+
+```{r}
+mapview(plot)
 ```
 
 
