@@ -12,6 +12,7 @@ library(urbnmapr)
 library(here)
 library(plotly)
 library(mapview)
+library(ggiraph)
 
 
 ```
@@ -48,32 +49,57 @@ spatial_data <- left_join(get_urbn_map(map = "territories_states", sf = TRUE),
                           by = "state_abbv")
 ```
 
+```{r}
+spatial_data <- spatial_data %>%
+  mutate(
+    tooltip_text = paste0(toupper(state_name), "\n", 
+                   ratio)
+  )
+```
 
 ```{r}
 
-plot <- ggplot() +
+plota <- ggplot(spatial_data) +
   geom_sf(spatial_data,
           mapping = aes(fill = ratio),
           color = "#ffffff", size = 0.25) +
   labs(fill = "Ratio of Population to Staffed Hospital Beds") +
    coord_sf(datum = NA)+
-  geom_sf_text(data = get_urbn_labels(map = "territories_states", sf = TRUE), 
-                aes(label = state_abbv), 
-            size = 3) +
-  theme_minimal() +
-  theme(rect = element_blank(),
+  #geom_sf_text(data = get_urbn_labels(map = "territories_states", sf = TRUE), 
+                #aes(label = state_abbv), 
+            #size = 3) +
+   theme_minimal() +
+  theme(panel.background = element_blank(),
         axis.ticks = element_blank(),
         axis.text.x = element_blank(),
         axis.text.y = element_blank()) 
 
-plot
+plota
    
 ```
 
 
 ```{r}
-mapview(plot)
+plotb <- ggplot(spatial_data) +
+  geom_sf_interactive(spatial_data,
+          mapping = aes(fill = ratio, tooltip = tooltip_text, data_id = state_name),
+          color = "#ffffff", size = 0.25) +
+  labs(fill = "Ratio of Population to Staffed Hospital Beds") +
+   coord_sf(datum = NA)+
+  #geom_sf_text(data = get_urbn_labels(map = "territories_states", sf = TRUE), 
+                #aes(label = state_abbv), 
+            #size = 3) +
+   theme_minimal() +
+  theme(panel.background = element_blank(),
+        axis.ticks = element_blank(),
+        axis.text.x = element_blank(),
+        axis.text.y = element_blank()) 
+
+plotb
 ```
 
+```{r}
+girafe(ggobj = plotb)
+```
 
 
