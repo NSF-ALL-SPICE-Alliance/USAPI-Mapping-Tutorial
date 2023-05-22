@@ -4,6 +4,9 @@ author: "Connor"
 date: "4/25/2023"
 output: html_document
 ---
+```{r}
+
+```
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -12,7 +15,8 @@ library(urbnmapr)
 library(here)
 library(plotly)
 library(mapview)
-library(ggiraph)
+library(ggiraph) 
+library(sf)
 
 
 ```
@@ -102,4 +106,77 @@ plotb
 girafe(ggobj = plotb)
 ```
 
+```{r}
+scaling_factor <- 1.5  
+
+rows <- c(51,52,53,54,55,56)
+
+scaling_factor2 <- 2   
+rows2 <- c(54,55,56) 
+scaling_factor3 <- 2.75
+
+edit_spatial <- spatial_data
+for (row_id in rows) {
+  geom_to_modify <- spatial_data[row_id, ] %>%
+    st_geometry()
+
+  modified_geom <- geom_to_modify
+  
+  if (st_geometry_type(geom_to_modify) == "MULTIPOLYGON") {
+    modified_geom <- modified_geom * scaling_factor
+  } else {
+    modified_geom <- modified_geom %>%
+      st_coordinates() %>%
+      { .[, 1:2] <- .[, 1:2] * scaling_factor; . } %>%
+      st_multipoint()
+  }
+
+  edit_spatial[row_id, ] <- sf::st_set_geometry(spatial_data[row_id, ], modified_geom)
+} 
+
+
+
+edit_spatial <- spatial_data
+for (row_id in rows2) {
+  geom_to_modify <- spatial_data[row_id, ] %>%
+    st_geometry()
+
+  modified_geom <- geom_to_modify
+  
+  if (st_geometry_type(geom_to_modify) == "MULTIPOLYGON") {
+    modified_geom <- modified_geom * scaling_factor3
+  } else {
+    modified_geom <- modified_geom %>%
+      st_coordinates() %>%
+      { .[, 1:2] <- .[, 1:2] * scaling_factor3; . } %>%
+      st_multipoint()
+  }
+
+  edit_spatial[row_id, ] <- sf::st_set_geometry(spatial_data[row_id, ], modified_geom)
+} 
+
+```
+
+```{r}
+plotc <- ggplot(edit_spatial) +
+  geom_sf_interactive(edit_spatial,
+          mapping = aes(fill = ratio, tooltip = tooltip_text, data_id = state_name),
+          color = "#ffffff", size = 0.25) +
+  labs(fill = "Ratio of Population to Staffed Hospital Beds") +
+   coord_sf(datum = NA)+
+  #geom_sf_text(data = get_urbn_labels(map = "territories_states", sf = TRUE), 
+                #aes(label = state_abbv), 
+            #size = 3) +
+   theme_minimal() +
+  theme(panel.background = element_blank(),
+        axis.ticks = element_blank(),
+        axis.text.x = element_blank(),
+        axis.text.y = element_blank()) 
+
+plotc
+```
+
+```{r}
+girafe(ggobj = plotc)
+```
 
