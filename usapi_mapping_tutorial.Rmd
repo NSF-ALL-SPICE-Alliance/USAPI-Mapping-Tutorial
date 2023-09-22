@@ -1,0 +1,56 @@
+---
+title: "USAPI Mapping Tutorial"
+author: "Connor"
+date: "7/5/2023"
+output: html_document
+---
+
+# Welcome to our USAPI Mapping Tutorial
+
+### Introduction
+
+The USAPI include the three U.S. Flag Territories of Guam, the Commonwealth of the Northern Mariana Islands, and American Samoa, as well as the three Freely Associated States (independent nations in a special compact relationship with the United States) of the Republic of Palau, the Republic of the Marshall Islands, and the Federated States of Micronesian (Pohnpei, Kosrae, Chuuk, and Yap).
+
+The USAPI are populated by more than 500,000 inhabitants who live on hundreds of remote islands and atolls spanning millions of square miles of the Pacific Ocean and crossing five time zones, including the international dateline.  These islands are culturally and linguistically diverse with more than a dozen spoken languages. While the indigenous peoples of the USAPI are rich in culture they are considerably small in population.  The islands are socially, politically and economically fragile but they are bountiful with rich marine and land-based eco-systems and numerous wildlife that cannot be found anywhere else on earth.
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(urbnmapr)
+library(here)
+library(ggiraph)
+```
+
+This data from the urbnmapr package is a good start but does not include:
+- Palau
+- Marshall Islands
+- Federated States of Micronesia (FSM)
+
+```{r}
+territories_states <- get_urbn_map(map = "territories_states", sf = TRUE)
+
+ggplot() +
+  geom_sf(territories_states,
+          mapping = aes(),
+          fill = "grey", color = "#ffffff")
+```
+
+```{r}
+territories_states$geometry
+
+```
+Step 1: Add to territories_states dataframe:
+- Palau
+- Marshall Islands
+- Federated States of Micronesia (FSM)
+
+How to do this: 
+1. Try giving chatGPT the coordinates of American Samoa the way they are listed in the geometry column. Then ask it do the same for Palau and so on . The geometries will be different based on their physical location vs the location we want them to appear on the map so they will have to be 
+**Shifted**
+**Enlarged**
+
+The Goal: Create choropleth maps of the US that include the USAPI
+
+
+
+
