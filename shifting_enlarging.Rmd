@@ -1,0 +1,171 @@
+---
+title: "Shifting / Enlarging"
+author: "Subin / Connor"
+date: "2023-10-27"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+used this tool to install packages that were not available on CRAN - installed from GitHub Repository
+```{r}
+devtools::install_github("UrbanInstitute/urbnmapr")
+```
+
+adding Palau to territories_state data frame 
+1. loading shapefiles
+```{r}
+
+```
+2. creating multipolygon from a single polygon 
+```{r}
+shifted_enlarged_polygon <- st_sfc(
+  st_polygon(list(
+    rbind(
+      c(134.5825 + 2, 7.5150 + 3),   # Shifted and enlarged coordinates
+      c(134.5825 + 3, 7.5150 + 4),   # Adjust the shift and enlargement factors as needed
+      c(134.5825 + 4, 7.5150 + 4),
+      c(134.5825 + 4, 7.5150 + 3),
+      c(134.5825 + 2, 7.5150 + 3)
+    )
+  ))
+)
+
+# Print the multipolygon in WKT format
+cat(st_as_text(shifted_enlarged_polygon))
+```
+3. now create an sf object palau sf from the WKT representation of the polygon 
+```{r}
+# WKT format representation of the polygon
+wkt_palau <- "MULTIPOLYGON (((136.5825 10.5150, 137.5825 11.5150, 137.5825 12.5150, 136.5825 12.5150, 136.5825 10.5150)))"
+
+# Convert to an sf object
+palau_sf <- st_as_sf(data.frame(id = 1, wkt = wkt_palau), wkt = "wkt")
+```
+4. now bind the row to add palau to territories_state 
+```{r}
+combined_data <- bind_rows(territories_states, palau_sf)
+```
+5. succesfully binded in combined_data but need to fix rows - remove wkt and id and add Palau data in wkt column to geometry 
+```{r}
+territories_states <- get_urbn_map(map = "territories_states", sf = TRUE)
+#WKT format representation of the polygon for Palau
+wkt_palau <- "MULTIPOLYGON (((136.5825 10.5150, 137.5825 11.5150, 137.5825 12.5150, 136.5825 12.5150, 136.5825 10.5150)))"
+
+# Convert WKT to an sf object
+palau_sf <- st_as_sf(data.frame(wkt = wkt_palau), wkt = "wkt")
+
+# Combine "palau_sf" with "territories_states" and update the geometry
+combined_data <- bind_rows(territories_states, palau_sf) %>%
+  st_set_geometry(st_geometry(palau_sf))
+
+# Drop the "wkt" column
+combined_data <- combined_data %>%
+  select(-wkt)
+
+# Print the combined dataset
+print(combined_data)
+
+```
+
+^ didn't really work out, lets try Marshall Islands and FSM 
+```{r}
+#coordinates 
+marshall_islands_coords <- c(171.1845, 7.1315)
+fsm_coords <- c(150.5508, 7.4256)
+
+#create sf objects 
+marshall_islands_sf <- st_point(c(marshall_islands_coords))
+fsm_sf <- st_point(c(fsm_coords))
+
+#shift/enlargement factors (might need to adjust later)
+shift_factor <- c(2, 2)  # Shift by 2 degrees in both directions
+enlarge_factor <- 1.5    # Enlarge by 1.5 times
+
+#apply those to the geometries 
+marshall_islands_sf <- st_transform(st_translate(st_scale(marshall_islands_sf, scale = enlarge_factor), shift = shift_factor), crs = st_crs(territories_states))
+fsm_sf <- st_transform(st_translate(st_scale(fsm_sf, scale = enlarge_factor), shift = shift_factor), crs = st_crs(territories_states))
+
+#combine to territories_state data set
+combined_data <- bind_rows(territories_states, marshall_islands_sf, fsm_sf)
+
+#new: drop the unwanted columns 
+combined_data <- combined_data %>%
+  select(-wkt)  
+
+#print combined data set
+print(combined_data)
+```
+
+trying to access territories_state full geometry version 
+```{r}
+full_geometry <-territories_states$geometry
+
+full_geometry_wkt <- sf::st_as_text(territories_states$geometry)
+
+cat(full_geometry_wkt)
+
+```
+
+restarting, deleted all files 
+```{r}
+rm(geo_sf)
+```
+
+```{r}
+# Load necessary library
+library(jsonlite)
+
+# Your JSON string
+json_string <- '[
+  {"type":"Feature","geometry":{"type":"MultiPolygon","coordinates":[[[[163.01,5.26],[162.9,5.31],[163.02,5.38],[163.01,5.26]]],[[[158.3,6.79],[158.12,6.93],[158.32,6.93],[158.3,6.79]]],[[[138.21,9.52],[138.06,9.42],[138.13,9.57],[138.21,9.52]]]]},"properties":{"name":"Micronesia, Federated States of"},"id":"FM"},
+  {"type":"Feature","geometry":{"type":"MultiPolygon","coordinates":[[[[168.77,7.3],[168.79,7.29],[168.67,7.33],[168.77,7.30]]],[[[168.57,7.40],[168.55,7.42],[168.56,7.47],[168.57,7.40]]],[[[168.97,7.57],[168.94,7.62],[168.97,7.60],[168.97,7.57]]]]},"properties":{"name":"Marshall Islands"},"id":"MH"},
+  {"type":"Feature","geometry":{"type":"MultiPolygon","coordinates":[[[[134.56,7.37],[134.49,7.44],[134.63,7.73],[134.56,7.37]]]]},"properties":{"name":"Palau"},"id":"PW"}
+]'
+
+# Convert JSON string to data frame
+geo_data <- fromJSON(json_string)
+
+# View the structure of the imported data frame
+str(geo_data)
+
+```
+shift and enlarge the 3 islands by a factor of 3 
+```{r}
+# Load necessary libraries
+library(sf)
+
+# Example shift values
+dx <- 3
+dy <- 3
+scale_factor <- 3
+
+# Iterate through the rows of geo_data and create sf objects
+sf_objects <- lapply(geo_data$geometry$coordinates, function(coords) {
+  # Convert the coordinates to matrix and check if the polygon is closed
+  coords_matrix <- matrix(coords, ncol = 2, byrow = TRUE)
+  if (!identical(coords_matrix[1, ], coords_matrix[nrow(coords_matrix), ])) {
+    coords_matrix <- rbind(coords_matrix, coords_matrix[1, ])
+  }
+  
+  # Shift and scale the coordinates manually
+  coords_matrix <- coords_matrix * scale_factor + c(dx, dy) * (scale_factor - 1)
+  
+  # Create an sf polygon
+  st_polygon(list(coords_matrix))
+})
+
+# Create an sf multipolygon
+enlarged_geo_sf <- st_sfc(sf_objects)
+
+# View the resulting sf object
+print(enlarged_geo_sf)
+
+```
+covert enlarged_geo_sf to a data frame 
+```{r}
+enlarged_df <- as.data.frame(enlarged_geo_sf)
+```
