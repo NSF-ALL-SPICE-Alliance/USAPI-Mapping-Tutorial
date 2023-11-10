@@ -1,0 +1,144 @@
+---
+title: "guess"
+author: "Connor Flynn"
+date: "11/9/2023"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(maptools)
+library(sf)
+library(tidyverse)
+library(urbnmapr)
+library(ggiraph) 
+```
+
+Palau | Marshall Islands | Micronesia
+
+```{r}
+transform_state <- function(object, rot, scale, shift){
+  object %>% elide(rotate = rot) %>%
+    elide(scale = max(apply(bbox(object), 1, diff)) / scale) %>%
+    elide(shift = shift)
+}
+```
+
+
+```{r}
+library(rgdal)
+my_spdf <- readOGR( 
+  dsn= paste0(getwd(),"/data/world_shape_file/") , 
+  layer="TM_WORLD_BORDERS_SIMPL-0.3",
+  verbose=FALSE
+)
+```
+
+```{r}
+palau <- my_spdf[my_spdf$NAME == "Palau", ] %>%
+   transform_state(rot = 0, scale = 0.3, shift = c(-1170000, -2363000))
+#proj4string(palau) <- proj4string(my_spdf)
+
+
+palau_sf <- st_as_sf(palau)
+```
+
+```{r}
+marshall_islands <- my_spdf[my_spdf$NAME == "Marshall Islands", ] %>%
+   transform_state(rot = 0, scale = 0.3, shift = c(1800000, -2400000))
+
+marshall_islands_sf <- st_as_sf(marshall_islands)
+```
+
+
+```{r}
+micronesia <- my_spdf[my_spdf$NAME == "Micronesia, Federated States of", ] %>%
+   transform_state(rot = 0, scale = 0.3, shift = c(2200000, -2600000))
+
+micronesia_sf <- st_as_sf(micronesia)
+```
+
+```{r}
+palau_sf <- st_set_crs(palau_sf, 2163)
+marshall_islands_sf <- st_set_crs(marshall_islands_sf, 2163)
+micronesia_sf <- st_set_crs(micronesia_sf, 2163)
+```
+
+```{r}
+micronesia_sf_palau_sf <- rbind(micronesia_sf, palau_sf)
+
+
+freely_associated_sf <- rbind(micronesia_sf_palau_sf, marshall_islands_sf)
+```
+
+```{r}
+colnames(freely_associated_sf)[colnames(freely_associated_sf) == "NAME"] ="state_name"
+```
+
+```{r}
+freely_associated_sf <- freely_associated_sf %>% 
+  select(state_name, geometry)
+```
+
+
+United States
+
+```{r}
+territories_counties <- get_urbn_map(map = "territories_states", sf = TRUE)
+```
+
+
+```{r}
+territories_counties <- territories_counties %>% 
+  select(state_name, geometry)
+```
+
+```{r}
+st_crs(palau_sf)
+st_crs(marshall_islands_sf)
+st_crs(micronesia_sf)
+st_crs(territories_counties)
+
+```
+
+
+```{r}
+states_freely_associated_sf <- rbind(territories_counties, freely_associated_sf)
+```
+
+Plot 
+
+
+```{r}
+ggplot() +
+  geom_sf(states_freely_associated_sf,
+          mapping = aes(),
+          fill = "grey", color = "#ffffff")
+```
+
+```{r}
+plotb <- ggplot(states_freely_associated_sf) +
+  geom_sf_interactive(states_freely_associated_sf,
+          mapping = aes(data_id = state_name, tooltip = state_name),
+          color = "#ffffff", size = 0.25) +
+  labs(fill = "Ratio of Population to Staffed Hospital Beds") +
+   coord_sf(datum = NA)+
+  #geom_sf_text(data = get_urbn_labels(map = "territories_states", sf = TRUE), 
+                #aes(label = state_abbv), 
+            #size = 3) +
+   theme_minimal() +
+  theme(panel.background = element_blank(),
+        axis.ticks = element_blank(),
+        axis.text.x = element_blank(),
+        axis.text.y = element_blank(), 
+         legend.text = element_text(size = 5),  # Adjust the legend text size
+        legend.title = element_text(size = 5),
+plot.margin = margin(b = 80))  # Adjust the legend title size) 
+
+plotb
+```
+
+```{r}
+girafe(ggobj = plotb)
+```
+
